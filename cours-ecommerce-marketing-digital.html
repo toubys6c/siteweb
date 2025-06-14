@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-commerce et Marketing Digital - ENSI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+
+        
+
+        header {
+            background: linear-gradient(90deg, #1a237e, #3f51b5, #2196f3);
+            color: white;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-image: url('https://images.unsplash.com/photo-1562774053-701939374585?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1974&q=80');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+            min-height: 100vh;
+            color: #333;
+            position: relative;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(30, 60, 114, 0.85) 0%, rgba(42, 82, 152, 0.85) 100%);
+            z-index: -1;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            min-height: 100vh;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+         .logo-section {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 25px;
+            margin-bottom: 20px;
+        }
+
+        .logo {
+            width: 90px;
+            height: 90px;
+            background: white;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            border: 3px solid #ffffff;
+            overflow: hidden;
+        }
+
+        .logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            padding: 5px;
+        }
+
+        .header-text h1 {
+            font-size: 2.8em;
+            margin-bottom: 8px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .header-text .subtitle {
+            font-size: 1.1em;
+            opacity: 0.95;
+            font-weight: 300;
+        }
+
+        .tagline {
+            font-size: 1.3em;
+            margin-top: 15px;
+            font-style: italic;
+            color: #e3f2fd;
+        }
+
+        nav {
+            background: #263238;
+            padding: 0;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        nav li {
+            margin: 0;
+        }
+
+        nav a {
+            display: block;
+            color: white;
+            text-decoration: none;
+            padding: 18px 35px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            font-size: 1.1em;
+        }
+
+        nav a:hover, nav a.active {
+            background: linear-gradient(45deg, #3f51b5, #2196f3);
+            transform: translateY(-2px);
+        }
+
+        main {
+            padding: 50px 40px;
+        }
+
+        .course-hero {
+            background: linear-gradient(135deg, #4caf50, #388e3c);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            margin-bottom: 50px;
+            box-shadow: 0 10px 30px rgba(76, 175, 80, 0.3);
+        }
+
+        .course-hero h1 {
+            font-size: 3em;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .course-hero .course-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+
+        .course-hero .course-code {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 1.1em;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+
+        .course-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .meta-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .meta-label {
+            font-size: 0.9em;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+
+        .meta-value {
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        .section {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            border-left: 5px solid #4caf50;
+        }
+
+        .section h2 {
+            color: #1a237e;
+            font-size: 2.2em;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .section-icon {
+            font-size: 1.2em;
+        }
+
+        .description {
+            font-size: 1.1em;
+            line-height: 1.8;
+            color: #555;
+            margin-bottom: 25px;
+        }
+
+        .objectives-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .objective-item {
+            background: linear-gradient(135deg, #e8f5e8, #c8e6c9);
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #4caf50;
+        }
+
+        .objective-item h4 {
+            color: #2e7d32;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+
+        .software-showcase {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .software-item {
+            background: linear-gradient(135deg, #4caf50, #388e3c);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            font-size: 1.1em;
+        }
+
+        .software-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(76, 175, 80, 0.3);
+        }
+
+        .teachers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-top: 20px;
+        }
+
+        .teacher-card {
+            background: linear-gradient(135deg, #f8f9fa, #e8f5e8);
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .teacher-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            border-color: #4caf50;
+        }
+
+        .teacher-avatar {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(45deg, #4caf50, #388e3c);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+            color: white;
+            margin: 0 auto 15px;
+        }
+
+        .teacher-name {
+            font-size: 1.3em;
+            color: #1a237e;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .teacher-title {
+            color: #666;
+            font-size: 1em;
+            margin-bottom: 10px;
+        }
+
+        .teacher-specialty {
+            background: #4caf50;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.9em;
+            display: inline-block;
+        }
+
+        .schedule-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .schedule-table th,
+        .schedule-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .schedule-table th {
+            background: linear-gradient(135deg, #4caf50, #388e3c);
+            color: white;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .schedule-table tr:hover {
+            background: #f5f5f5;
+        }
+
+        .schedule-table .week-number {
+            background: #e8f5e8;
+            font-weight: bold;
+            color: #2e7d32;
+        }
+
+        .schedule-table .topic {
+            color: #4caf50;
+            font-weight: 500;
+        }
+
+        .schedule-table .type-cours {
+            background: #e8f5e8;
+            color: #2e7d32;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.9em;
+            display: inline-block;
+        }
+
+        .schedule-table .type-tp {
+            background: #fff3e0;
+            color: #f57c00;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.9em;
+            display: inline-block;
+        }
+
+        .schedule-table .type-projet {
+            background: #e8f5e8;
+            color: #4caf50;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.9em;
+            display: inline-block;
+        }
+
+        .prerequisites {
+            background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+            border-left: 4px solid #ff9800;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .prerequisites h4 {
+            color: #e65100;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .prerequisites ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+
+        .prerequisites li {
+            padding: 5px 0;
+            position: relative;
+            padding-left: 25px;
+        }
+
+        .prerequisites li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #ff9800;
+            font-weight: bold;
+        }
+
+        footer {
+            background: #1a237e;
+            color: white;
+            text-align: center;
+            padding: 30px;
+            margin-top: 60px;
+        }
+
+        .footer-content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .contact-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+            font-size: 0.95em;
+        }
+
+        .back-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: linear-gradient(135deg, #4caf50, #388e3c);
+            color: white;
+            text-decoration: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            margin-bottom: 30px;
+        }
+
+        .back-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+        }
+
+        @media (max-width: 768px) {
+            .logo-section {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .header-text h1 {
+                font-size: 2.2em;
+            }
+            
+            nav ul {
+                flex-direction: column;
+            }
+            
+            nav a {
+                padding: 15px 20px;
+            }
+            
+            main {
+                padding: 30px 20px;
+            }
+            
+            .course-hero h1 {
+                font-size: 2.2em;
+            }
+            
+            .section {
+                padding: 25px 20px;
+            }
+            
+            .teachers-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .course-meta {
+                grid-template-columns: 1fr;
+            }
+            
+            .software-showcase {
+                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+         <header>
+            <div class="logo-section">
+                <div class="logo">
+                    <img src="https://www.ecoles.com.tn/sites/default/files/universite/logo/ensi-logo.jpg" alt="Logo ENSI">
+                </div>
+                <div class="header-text">
+                    <h1>École Nationale des Sciences de l'Informatique</h1>
+                    <p class="subtitle">ENSI - Excellence en Formation Informatique</p>
+                    <p style="font-size: 1.2em; margin-top: 10px; color: #e3f2fd; font-weight: 500;">
+                        🌍 Manouba, Tunisie 🇹🇳
+                    </p>
+                </div>
+            </div>
+            <p class="tagline">"Où l'informatique devient innovation"</p>
+        </header>
+
+        <nav>
+            <ul>
+                <li><a href="index.html">Accueil</a></li>
+                <li><a href="Academie.html" class="active">Académique</a></li>
+                <li><a href="Admission.html">Admission</a></li>
+                <li><a href="Galerie.html">Galerie</a></li>
+            </ul>
+        </nav>
+
+        <main>
+            <a href="Academie.html" class="back-button">
+                ← Retour aux Départements
+            </a>
+
+            <div class="course-hero">
+                <div class="course-icon">🛒</div>
+                <div class="course-code">ECO-MKT-201</div>
+                <h1>E-commerce et Marketing Digital</h1>
+                
+                <div class="course-meta">
+                    <div class="meta-item">
+                        <div class="meta-label">Durée</div>
+                        <div class="meta-value">14 Semaines</div>
+                    </div>
+                    <div class="meta-item">
+                        <div class="meta-label">Crédits ECTS</div>
+                        <div class="meta-value">6 Crédits</div>
+                    </div>
+                    <div class="meta-item">
+                        <div class="meta-label">Niveau</div>
+                        <div class="meta-value">Intermédiaire</div>
+                    </div>
+                    <div class="meta-item">
+                        <div class="meta-label">Langue</div>
+                        <div class="meta-value">Français</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>
+                    <span class="section-icon">📚</span>
+                    Description du Cours
+                </h2>
+                <div class="description">
+                    Ce cours complet vous immergera dans l'écosystème du commerce électronique et du marketing digital moderne. 
+                    Vous apprendrez les stratégies commerciales numériques, les techniques de marketing en ligne, 
+                    l'analyse des données clients et les outils de conversion pour développer des projets e-commerce performants.
+                </div>
+                <div class="description">
+                    De la conception de plateformes e-commerce aux campagnes publicitaires ciblées, 
+                    ce programme couvre tous les aspects du marketing digital avec des cas pratiques réels 
+                    et des projets concrets pour maîtriser les enjeux actuels du commerce numérique.
+                </div>
+                
+                <div class="prerequisites">
+                    <h4>Prérequis</h4>
+                    <ul>
+                        <li>Bases du développement web (HTML, CSS, JavaScript)</li>
+                        <li>Fondamentaux des bases de données</li>
+                        <li>Notions de gestion de projet</li>
+                        <li>Mathématiques appliquées et statistiques de base</li>
+                        <li>Compréhension des réseaux sociaux et du web</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>
+                    <span class="section-icon">🎯</span>
+                    Objectifs d'Apprentissage
+                </h2>
+                <div class="objectives-grid">
+                    <div class="objective-item">
+                        <h4>Stratégies E-commerce</h4>
+                        <p>Concevoir et développer des plateformes e-commerce performantes avec UX/UI optimisées</p>
+                    </div>
+                    <div class="objective-item">
+                        <h4>Marketing Digital</h4>
+                        <p>Maîtriser SEO, SEA, email marketing, réseaux sociaux et publicité programmatique</p>
+                    </div>
+                    <div class="objective-item">
+                        <h4>Analyse de Données</h4>
+                        <p>Analyser le comportement client, KPIs, conversion rate et ROI des campagnes</p>
+                    </div>
+                    <div class="objective-item">
+                        <h4>Marketing Automation</h4>
+                        <p>Automatiser les processus marketing et personnaliser l'expérience client</p>
+                    </div>
+                    <div class="objective-item">
+                        <h4>Marketplaces & Omnichannel</h4>
+                        <p>Intégrer les ventes sur marketplaces et développer une stratégie omnicanale</p>
+                    </div>
+                    <div class="objective-item">
+                        <h4>CRM & Fidélisation</h4>
+                        <p>Gérer la relation client et mettre en place des stratégies de fidélisation</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>
+                    <span class="section-icon">💻</span>
+                    Technologies et Outils
+                </h2>
+                <div class="software-showcase">
+                    <div class="software-item">Shopify</div>
+                    <div class="software-item">WooCommerce</div>
+                    <div class="software-item">Google Analytics</div>
+                    <div class="software-item">Google Ads</div>
+                    <div class="software-item">Facebook Ads</div>
+                    <div class="software-item">Mailchimp</div>
+                    <div class="software-item">Hootsuite</div>
+                    <div class="software-item">SEMrush</div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>
+                    <span class="section-icon">👨‍🏫</span>
+                    Équipe Enseignante
+                </h2>
+                <div class="teachers-grid">
+                    <div class="teacher-card">
+                        <div class="teacher-avatar">LD</div>
+                        <div class="teacher-name">Dr. Laurent DUBOIS</div>
+                        <div class="teacher-title">Professeur Responsable</div>
+                        <div class="teacher-specialty">E-commerce Strategy</div>
+                    </div>
+                    <div class="teacher-card">
+                        <div class="teacher-avatar">CM</div>
+                        <div class="teacher-name">Mme Claire MOREAU</div>
+                        <div class="teacher-title">Expert Marketing Digital</div>
+                        <div class="teacher-specialty">SEO/SEA</div>
+                    </div>
+                    <div class="teacher-card">
+                        <div class="teacher-avatar">PR</div>
+                        <div class="teacher-name">M. Pierre ROBERT</div>
+                        <div class="teacher-title">Consultant E-commerce</div>
+                        <div class="teacher-specialty">UX/UI Design</div>
+                    </div>
+                    <div class="teacher-card">
+                        <div class="teacher-avatar">AS</div>
+                        <div class="teacher-name">Mme Anne SIMON</div>
+                        <div class="teacher-title">Data Analyst</div>
+                        <div class="teacher-specialty">Web Analytics</div>
+                    </div>
+                    <div class="teacher-card">
+                        <div class="teacher-avatar">TB</div>
+                        <div class="teacher-name">M. Thomas BERNARD</div>
+                        <div class="teacher-title">Social Media Manager</div>
+                        <div class="teacher-specialty">Réseaux Sociaux</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>
+                    <span class="section-icon">📅</span>
+                    Planning du Cours
+                </h2>
+                <table class="schedule-table">
+                    <thead>
+                        <tr>
+                            <th>Semaine</th>
+                            <th>Sujet</th>
+                            <th>Type</th>
+                            <th>Enseignant</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="week-number">S1</td>
+                            <td class="topic">Introduction au E-commerce</td>
+                            <td><span class="type-cours">Cours</span></td>
+                            <td>Dr. Laurent DUBOIS</td>
+                            <td>03 Fév 2025</td>
+                        </tr>
+                        <tr>
+                            <td class="week-number">S2</td>
+                            <td class="topic">Plateformes E-commerce - Shopify/WooCommerce</td>
+                            <td><span class="type-tp">TP</span></td>
+                            <td>Dr. Laurent DUBOIS</td>
+                            <td>10 Fév 2025</td>
+                        </tr>
+                        <tr>
+                            <td class="week-number">S3</td>
+                            <td class="topic">UX/UI Design pour E-commerce</td>
+                            <td><span class="type-tp">TP</span></td>
+                            <td>M. Pierre ROBERT</td>
+                            <td>17 Fév 2025</td>
+                        </tr>
+                        <tr>
+                            <td class="week-number">S4</td>
+                            <td class="topic">Fondamentaux du Marketing Digital</td>
+                            <td><span class="type-cours">Cours</span></td>
+                            <td>Mme Claire MOREAU</td>
+                            <td>24 Fév 2025</td>
+                        </tr>
+                        <tr>
+                            <td class="week-number">S5</td>
+                            <td class="topic">SEO - Référencement Naturel</td>
+                            <td><span class="type-tp">TP</span></td>
+                            <td>Mme Claire MOREAU</td>
+                            <td>03 Mar 2025</td>
+                        </tr>
+                        <tr>
+                            <td class="week-number">S6</td>
+                            <td class="topic">SEA - Google Ads & Facebook Ads</td>
+                            <td><span class="type-tp">TP</span></td>
+                            <td>Mme Claire MOREAU</td>
+                            <td>10 Mar 2025</td>
+                        </tr>
+                        <tr>
+                            <td class="week-number">S7</td>
+                            <td class="topic">Email Marketing & Marketing Automation</td>
+                            <td><span class="type-tp">TP</span></td>
+                            <td>Mme Claire MOREAU</td>
+                            <td>17 Mar 2025</td>
+                        </tr>
+                        <tr>
+                            <td class="week-number">S8</td>
+                            <td class="topic">Réseaux Sociaux & Influence Marketing</td>
+                            <td><span class="type-tp">TP</span></td>
+                            <td>M. Thomas BERNARD</td>
+                            <td>24 Mar 2025</td>
+                        </tr>
+                        <tr>
+                            <td class="week-number">S9</td>
+                            <td class="topic">Google Analytics & Web Analytics</td>
+                            <td><span class="type-tp">TP</span></td>
+                            <td>Mme Anne SIMON</td>
+                            <td>31 Mar 2025</td>
+                        </tr>
+                        <tr>
+                            <td class="week-number">S10</td>
+                            <td class="topic">Conversion Rate Optimization (CRO)</td>
+                            <td><span class="type-tp">TP</span></td>
+                            <td>M. Pierre ROBERT</td>
+                            <td>07 Avr 2025</td>
+                        </tr>
+                        <tr>
+                            <td class="week-number">S11</td>
+                            <td class="topic">Marketplaces - Amazon, eBay, Cdiscount</td>
+                            <td><span class="type-cours">Cours</span></td>
+                            <td>Dr. Laurent DUBOIS</td>
+                            <td>14 Avr 2025</td>
+                        </tr>
+                        <tr>
+                            <td class="week-number">S12</td>
+                            <td class="topic">CRM & Fidélisation Client</td>
+                            <td><span class="type-tp">TP</span></td>
+                            <td>Dr. Laurent DUBOIS</td>
+                            <td>21 Avr 2025</td>
+                        </tr>
+                        <tr>
+                            <td class="week-number">S13</td>
+                            <td class="topic">Projet Final - Boutique E-commerce Complète</td>
+                            <td><span class="type-projet">Projet</span></td>
+                            <td>Équipe Complète</td>
+                            <td>28 Avr 2025</td>
+                        </tr>
+                        <tr>
+                            <td class="week-number">S14</td>
+                            <td class="topic">Soutenance et Présentation</td>
+                            <td><span class="type-projet">Projet</span></td>
+                            <td>Jury Complet</td>
+                            <td>05 Mai 2025</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+
+        <footer>
+            <div class="footer-content">
+                <h3>École Nationale des Sciences de l'Informatique</h3>
+                <div class="contact-info">
+                    <div>
+                        <strong>Adresse :</strong><br>
+                        Campus Universitaire de la Manouba<br>
+                        Université de la Manouba<br>
+                        2010 Manouba<br>
+                        Tunisie
+                    </div>
+                    <div>
+                        <strong>Contact :</strong><br>
+                        Tél : +216 70 860 260<br>
+                        Email : contact@ensi.rnu.tn<br>
+                        Web : www.ensi.rnu.tn<br>
+                        LinkedIn : /school/ensi-manouba
+                    </div>
+                    <div>
+                        <strong>Accès Campus :</strong><br>
+                        Métro : Ligne 5 - Université de la Manouba<br>
+                        Bus : Lignes 21, 22, 23<br>
+                        Parking disponible<br>
+                        Navettes universitaires
+                    </div>
+                </div>
+                <p style="margin-top: 20px; font-size: 0.9em; opacity: 0.8;">
+                    © 2024 ENSI - École Nationale des Sciences de l'Informatique. Tous droits réservés.
+                </p>
+                <div style="margin-top: 25px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.3);">
+                    <p style="font-size: 0.9em; opacity: 0.9;">
+                        <strong>Site web développé par :</strong><br>
+                        COULIBALY TOUBY BAKARY & OUERDAOGO FAYSSAL DIMITRI
+                    </p>
+                </div>
+            </div>
+        </footer>
+
+
+    <script>
+        // Mettre à jour le nom du fichier sélectionné
+        function updateFileName(input, infoId) {
+            const info = document.getElementById(infoId);
+            if (input.files.length > 0) {
+                const fileNames = Array.from(input.files).map(file => file.name).join(', ');
+                info.textContent = fileNames;
+            } else {
+                info.textContent = 'Aucun fichier sélectionné';
+            }
+        }
+
+        // Gestion de la soumission du formulaire
+        function submitForm(event) {
+            event.preventDefault();
+            const form = document.getElementById('admission-form');
+            const messageContainer = document.getElementById('message-container');
+            const formData = new FormData(form);
+
+            // Validation côté client
+            try {
+                // Vérification de la lettre de motivation (minimum 500 mots)
+                const motivation = formData.get('motivation');
+                const wordCount = motivation.trim().split(/\s+/).length;
+                if (wordCount < 500) {
+                    throw new Error('La lettre de motivation doit contenir au moins 500 mots.');
+                }
+
+                // Vérification des fichiers PDF pour CV et diplômes
+                const cv = formData.get('cv');
+                if (cv && cv.type !== 'application/pdf') {
+                    throw new Error('Le CV doit être au format PDF.');
+                }
+                const diplomes = formData.getAll('diplomes[]');
+                for (let diplome of diplomes) {
+                    if (diplome && diplome.type !== 'application/pdf') {
+                        throw new Error('Les diplômes doivent être au format PDF.');
+                    }
+                }
+
+                // Simulation d'envoi au serveur
+                console.log('Formulaire soumis avec succès');
+for (let [key, value] of formData.entries()) {
+    console.log(`${key}: ${value}`);
+}
+
+                // Afficher le message de succès
+                messageContainer.innerHTML = '<div class="message success">Votre candidature a été soumise avec succès ! Vous recevrez une confirmation par email.</div>';
+                form.reset();
+                document.querySelectorAll('.file-info').forEach(info => {
+                    info.textContent = 'Aucun fichier sélectionné';
+                });
+
+                // Faire défiler vers le haut du formulaire
+                window.scrollTo({ top: form.offsetTop, behavior: 'smooth' });
+
+                return false;
+
+            } catch (error) {
+                // Afficher le message d'erreur
+                messageContainer.innerHTML = <div class="message error">${error.message}</div>;
+                window.scrollTo({ top: form.offsetTop, behavior: 'smooth' });
+                return false;
+            }
+        }
+    </script>
+</body>
+</html>
