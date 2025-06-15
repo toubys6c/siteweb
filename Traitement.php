@@ -1,407 +1,506 @@
 <?php
+// Traitement.php - Traitement du formulaire d'admission ENSI
+// Auteurs: COULIBALY TOUBY BAKARY & OUERDAOGO FAYSSAL DIMITRI
+
+// Configuration de l'affichage des erreurs (à désactiver en production)
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+// Configuration de l'encodage
+header('Content-Type: text/html; charset=UTF-8');
+
+// Démarrage de la session
 session_start();
 
-// Récupérer les messages de succès
-$success_messages = isset($_SESSION['success_messages']) ? $_SESSION['success_messages'] : [];
-$candidature_id = isset($_SESSION['candidature_id']) ? $_SESSION['candidature_id'] : '';
+// Configuration de la base de données
+$host = 'localhost';
+$dbname = 'ensi_admission';
+$username = 'root'; // À modifier selon votre configuration
+$password = '';     // À modifier selon votre configuration
 
-// Nettoyer la session
-unset($_SESSION['success_messages']);
-unset($_SESSION['candidature_id']);
+// Configuration email
+$admin_email = 'admission@ensi.rnu.tn';
+$smtp_host = 'localhost'; // À configurer selon votre serveur SMTP
 
-// Si pas de messages de succès, rediriger vers le formulaire
-if (empty($success_messages)) {
+// Dossier de stockage des fichiers uploadés
+$upload_dir = 'uploads/candidatures/';
+
+// Vérification si le formulaire a été soumis
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: Admission.html');
     exit();
 }
-?>
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ENSI - Confirmation de Candidature</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
 
-        body {
-            font-family: 'Arial', sans-serif;
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            min-height: 100vh;
-            color: #333;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
+try {
+    // Connexion à la base de données
+    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    
+    // Validation et nettoyage des données
+    $data = validateAndSanitizeData($_POST);
+    
+    // Gestion des fichiers uploadés
+    $uploaded_files = handleFileUploads($_FILES);
+    
+    // Insertion en base de données
+    $candidature_id = insertCandidature($pdo, $data, $uploaded_files);
+    
+    // Envoi des emails de confirmation
+    sendConfirmationEmails($data, $candidature_id);
+    
+    // Affichage de la page de succès
+    displaySuccessPage($data, $candidature_id);
+    
+} catch (Exception $e) {
+    // Gestion des erreurs
+    error_log("Erreur traitement candidature: " . $e->getMessage());
+    displayErrorPage($e->getMessage());
+}
 
-        .confirmation-container {
-            background: rgba(255, 255, 255, 0.98);
-            max-width: 800px;
-            width: 100%;
-            border-radius: 20px;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
-            overflow: hidden;
-            animation: slideIn 0.8s ease-out;
+/**
+ * Validation et nettoyage des données du formulaire
+ */
+function validateAndSanitizeData($post_data) {
+    $data = [];
+    
+    // Informations personnelles (obligatoires)
+    $required_fields = [
+        'nom', 'prenom', 'date-naissance', 'lieu-naissance', 
+        'nationalite', 'sexe', 'adresse', 'telephone', 'email',
+        'niveau-admission', 'specialite', 'dernier-diplome', 
+        'etablissement', 'annee-obtention', 'niveau-anglais', 'motivation'
+    ];
+    
+    foreach ($required_fields as $field) {
+        if (empty($post_data[$field])) {
+            throw new Exception("Le champ '$field' est obligatoire.");
         }
+        $data[$field] = trim(htmlspecialchars($post_data[$field], ENT_QUOTES, 'UTF-8'));
+    }
+    
+    // Validation email
+    if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+        throw new Exception("L'adresse email n'est pas valide.");
+    }
+    
+    // Validation date
+    if (!validateDate($data['date-naissance'])) {
+        throw new Exception("La date de naissance n'est pas valide.");
+    }
+    
+    // Validation année
+    if ($data['annee-obtention'] < 2000 || $data['annee-obtention'] > date('Y')) {
+        throw new Exception("L'année d'obtention du diplôme n'est pas valide.");
+    }
+    
+    // Champs optionnels
+    $optional_fields = [
+        'telephone-urgence', 'contact-urgence', 'mention', 'parcours',
+        'autres-langues', 'experiences', 'projet-professionnel'
+    ];
+    
+    foreach ($optional_fields as $field) {
+        $data[$field] = isset($post_data[$field]) ? trim(htmlspecialchars($post_data[$field], ENT_QUOTES, 'UTF-8')) : '';
+    }
+    
+    // Langages de programmation (array)
+    $data['langages'] = isset($post_data['langages']) && is_array($post_data['langages']) 
+        ? implode(', ', array_map('htmlspecialchars', $post_data['langages'])) 
+        : '';
+    
+    // Comment a connu l'école
+    $data['connaissance'] = isset($post_data['connaissance']) ? htmlspecialchars($post_data['connaissance'], ENT_QUOTES, 'UTF-8') : '';
+    
+    // Consentements (obligatoires)
+    if (empty($post_data['declaration-honneur']) || empty($post_data['rgpd']) || empty($post_data['conditions'])) {
+        throw new Exception("Vous devez accepter tous les consentements obligatoires.");
+    }
+    
+    $data['newsletter'] = isset($post_data['newsletter']) ? 1 : 0;
+    
+    return $data;
+}
 
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-50px);
+/**
+ * Validation d'une date
+ */
+function validateDate($date, $format = 'Y-m-d') {
+    $d = DateTime::createFromFormat($format, $date);
+    return $d && $d->format($format) === $date;
+}
+
+/**
+ * Gestion des fichiers uploadés
+ */
+function handleFileUploads($files) {
+    global $upload_dir;
+    
+    $uploaded_files = [];
+    $max_file_size = 5 * 1024 * 1024; // 5MB
+    
+    // Créer le dossier s'il n'existe pas
+    if (!is_dir($upload_dir)) {
+        if (!mkdir($upload_dir, 0755, true)) {
+            throw new Exception("Impossible de créer le dossier de stockage.");
+        }
+    }
+    
+    // ID unique pour cette candidature
+    $candidate_id = uniqid('ENSI_', true);
+    $candidate_dir = $upload_dir . $candidate_id . '/';
+    
+    if (!mkdir($candidate_dir, 0755)) {
+        throw new Exception("Impossible de créer le dossier candidat.");
+    }
+    
+    // Types de fichiers autorisés
+    $allowed_types = [
+        'cv' => ['application/pdf'],
+        'photo' => ['image/jpeg', 'image/png', 'image/jpg'],
+        'diplomes' => ['application/pdf'],
+        'autres-documents' => ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg']
+    ];
+    
+    foreach ($files as $field_name => $file_info) {
+        if ($field_name === 'diplomes' || $field_name === 'autres-documents') {
+            // Fichiers multiples
+            if (isset($file_info['name']) && is_array($file_info['name'])) {
+                $uploaded_files[$field_name] = [];
+                for ($i = 0; $i < count($file_info['name']); $i++) {
+                    if ($file_info['error'][$i] === UPLOAD_ERR_OK) {
+                        $file = processFile(
+                            $file_info['tmp_name'][$i],
+                            $file_info['name'][$i],
+                            $file_info['type'][$i],
+                            $file_info['size'][$i],
+                            $candidate_dir,
+                            $field_name,
+                            $allowed_types[$field_name],
+                            $max_file_size
+                        );
+                        $uploaded_files[$field_name][] = $file;
+                    }
+                }
             }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .header {
-            background: linear-gradient(90deg, #1a237e, #3f51b5, #2196f3);
-            color: white;
-            padding: 40px 30px;
-            text-align: center;
-        }
-
-        .success-icon {
-            font-size: 4em;
-            margin-bottom: 20px;
-            animation: bounce 2s infinite;
-        }
-
-        @keyframes bounce {
-            0%, 20%, 50%, 80%, 100% {
-                transform: translateY(0);
-            }
-            40% {
-                transform: translateY(-10px);
-            }
-            60% {
-                transform: translateY(-5px);
-            }
-        }
-
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-        }
-
-        .header .subtitle {
-            font-size: 1.2em;
-            opacity: 0.9;
-            font-weight: 300;
-        }
-
-        .content {
-            padding: 50px 40px;
-            text-align: center;
-        }
-
-        .success-message {
-            background: linear-gradient(135deg, #e8f5e8, #c8e6c9);
-            border: 2px solid #4caf50;
-            border-radius: 15px;
-            padding: 30px;
-            margin-bottom: 30px;
-        }
-
-        .success-message h2 {
-            color: #2e7d32;
-            font-size: 2em;
-            margin-bottom: 20px;
-        }
-
-        .success-list {
-            list-style: none;
-            text-align: left;
-        }
-
-        .success-list li {
-            background: white;
-            margin: 10px 0;
-            padding: 15px 20px;
-            border-radius: 10px;
-            border-left: 4px solid #4caf50;
-            font-size: 1.1em;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .success-list li:before {
-            content: "✅ ";
-            margin-right: 10px;
-        }
-
-        .candidature-id {
-            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
-            border: 2px solid #2196f3;
-            border-radius: 15px;
-            padding: 25px;
-            margin: 30px 0;
-        }
-
-        .candidature-id h3 {
-            color: #1976d2;
-            font-size: 1.5em;
-            margin-bottom: 10px;
-        }
-
-        .candidature-id .id-number {
-            font-size: 1.3em;
-            font-weight: bold;
-            color: #0d47a1;
-            background: white;
-            padding: 10px 20px;
-            border-radius: 8px;
-            display: inline-block;
-            letter-spacing: 1px;
-        }
-
-        .info-section {
-            background: #f8f9fa;
-            border-radius: 15px;
-            padding: 30px;
-            margin: 30px 0;
-            text-align: left;
-        }
-
-        .info-section h3 {
-            color: #1a237e;
-            font-size: 1.4em;
-            margin-bottom: 15px;
-            text-align: center;
-        }
-
-        .info-section p {
-            line-height: 1.6;
-            margin-bottom: 10px;
-            font-size: 1.05em;
-        }
-
-        .next-steps {
-            background: linear-gradient(135deg, #fff3e0, #ffe0b2);
-            border: 2px solid #ff9800;
-            border-radius: 15px;
-            padding: 25px;
-            margin: 30px 0;
-        }
-
-        .next-steps h3 {
-            color: #e65100;
-            font-size: 1.4em;
-            margin-bottom: 15px;
-            text-align: center;
-        }
-
-        .next-steps ul {
-            list-style: none;
-            text-align: left;
-        }
-
-        .next-steps li {
-            margin: 10px 0;
-            padding: 10px 0;
-            border-bottom: 1px solid #ffcc02;
-            font-size: 1.05em;
-        }
-
-        .next-steps li:before {
-            content: "📋 ";
-            margin-right: 10px;
-        }
-
-        .actions {
-            margin-top: 40px;
-            display: flex;
-            gap: 20px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            padding: 15px 30px;
-            border: none;
-            border-radius: 10px;
-            font-size: 1.1em;
-            font-weight: 600;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-block;
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary {
-            background: linear-gradient(45deg, #1a237e, #3f51b5);
-            color: white;
-            box-shadow: 0 4px 15px rgba(26, 35, 126, 0.3);
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(26, 35, 126, 0.4);
-        }
-
-        .btn-secondary {
-            background: #f5f5f5;
-            color: #333;
-            border: 2px solid #ddd;
-        }
-
-        .btn-secondary:hover {
-            background: #e0e0e0;
-            transform: translateY(-2px);
-        }
-
-        .contact-info {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 20px;
-            margin-top: 30px;
-            text-align: center;
-            border-left: 4px solid #2196f3;
-        }
-
-        .contact-info h4 {
-            color: #1a237e;
-            margin-bottom: 10px;
-        }
-
-        .contact-info p {
-            font-size: 0.95em;
-            color: #666;
-        }
-
-        @media (max-width: 768px) {
-            .confirmation-container {
-                margin: 10px;
-                border-radius: 15px;
-            }
-            
-            .header {
-                padding: 30px 20px;
-            }
-            
-            .header h1 {
-                font-size: 2em;
-            }
-            
-            .content {
-                padding: 30px 20px;
-            }
-            
-            .actions {
-                flex-direction: column;
-                align-items: center;
-            }
-            
-            .btn {
-                width: 100%;
-                max-width: 300px;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="confirmation-container">
-        <div class="header">
-            <div class="success-icon">🎉</div>
-            <h1>Candidature Reçue !</h1>
-            <p class="subtitle">École Nationale Supérieure d'Informatique</p>
-        </div>
-
-        <div class="content">
-            <div class="success-message">
-                <h2>Félicitations !</h2>
-                <ul class="success-list">
-                    <?php foreach ($success_messages as $message): ?>
-                        <li><?php echo htmlspecialchars($message); ?></li>
-                    <?php endforeach; ?>
-                </ul>
-            </div>
-
-            <?php if (!empty($candidature_id)): ?>
-            <div class="candidature-id">
-                <h3>Votre numéro de candidature</h3>
-                <div class="id-number"><?php echo htmlspecialchars($candidature_id); ?></div>
-                <p style="margin-top: 15px; font-size: 0.9em; color: #666;">
-                    <strong>Important :</strong> Conservez précieusement ce numéro pour toute correspondance future.
-                </p>
-            </div>
-            <?php endif; ?>
-
-            <div class="next-steps">
-                <h3>Prochaines Étapes</h3>
-                <ul>
-                    <li>Notre commission d'admission étudiera votre dossier</li>
-                    <li>Vous recevrez une réponse sous 15 jours ouvrables</li>
-                    <li>Un entretien pourra être organisé si votre profil correspond</li>
-                    <li>Les résultats définitifs seront communiqués par email</li>
-                </ul>
-            </div>
-
-            <div class="info-section">
-                <h3>Informations Importantes</h3>
-                <p><strong>Délai de réponse :</strong> 15 jours ouvrables maximum</p>
-                <p><strong>Moyen de contact :</strong> Tous les échanges se feront par email</p>
-                <p><strong>Documents :</strong> Si des pièces complémentaires sont nécessaires, nous vous contacterons</p>
-                <p><strong>Entretien :</strong> Un entretien (présentiel ou visioconférence) pourra être organisé</p>
-            </div>
-
-            <div class="actions">
-                <a href="Acueil.html" class="btn btn-primary">Retour à l'Accueil</a>
-                <a href="Academie.html" class="btn btn-secondary">Découvrir nos Formations</a>
-            </div>
-
-            <div class="contact-info">
-                <h4>Besoin d'aide ?</h4>
-                <p>Service Admission ENSI<br>
-                Email: admission@ensi.edu<br>
-                Tél: +33 1 42 34 56 80</p>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // Animation au chargement
-        document.addEventListener('DOMContentLoaded', function() {
-            const container = document.querySelector('.confirmation-container');
-            container.style.opacity = '0';
-            container.style.transform = 'translateY(-50px)';
-            
-            setTimeout(() => {
-                container.style.transition = 'all 0.8s ease-out';
-                container.style.opacity = '1';
-                container.style.transform = 'translateY(0)';
-            }, 100);
-        });
-
-        // Fonction pour copier le numéro de candidature
-        document.addEventListener('DOMContentLoaded', function() {
-            const idNumber = document.querySelector('.id-number');
-            if (idNumber) {
-                idNumber.style.cursor = 'pointer';
-                idNumber.title = 'Cliquer pour copier';
+        } else {
+            // Fichier unique
+            if (isset($file_info['error']) && $file_info['error'] === UPLOAD_ERR_OK) {
+                if (in_array($field_name, ['cv', 'photo']) && empty($file_info['name'])) {
+                    throw new Exception("Le fichier '$field_name' est obligatoire.");
+                }
                 
-                idNumber.addEventListener('click', function() {
-                    navigator.clipboard.writeText(this.textContent).then(function() {
-                        const originalText = idNumber.textContent;
-                        idNumber.textContent = 'Copié !';
-                        idNumber.style.background = '#4caf50';
-                        idNumber.style.color = 'white';
-                        
-                        setTimeout(() => {
-                            idNumber.textContent = originalText;
-                            idNumber.style.background = 'white';
-                            idNumber.style.color = '#0d47a1';
-                        }, 2000);
-                    });
-                });
+                if (!empty($file_info['name'])) {
+                    $uploaded_files[$field_name] = processFile(
+                        $file_info['tmp_name'],
+                        $file_info['name'],
+                        $file_info['type'],
+                        $file_info['size'],
+                        $candidate_dir,
+                        $field_name,
+                        $allowed_types[$field_name],
+                        $max_file_size
+                    );
+                }
+            } elseif (in_array($field_name, ['cv', 'photo'])) {
+                throw new Exception("Le fichier '$field_name' est obligatoire.");
             }
-        });
-    </script>
-</body>
-</html>
+        }
+    }
+    
+    return ['candidate_id' => $candidate_id, 'files' => $uploaded_files];
+}
+
+/**
+ * Traitement d'un fichier individuel
+ */
+function processFile($tmp_name, $original_name, $type, $size, $candidate_dir, $field_name, $allowed_types, $max_size) {
+    // Vérification de la taille
+    if ($size > $max_size) {
+        throw new Exception("Le fichier '$original_name' est trop volumineux (max 5MB).");
+    }
+    
+    // Vérification du type MIME
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $detected_type = finfo_file($finfo, $tmp_name);
+    finfo_close($finfo);
+    
+    if (!in_array($detected_type, $allowed_types)) {
+        throw new Exception("Le type de fichier '$original_name' n'est pas autorisé.");
+    }
+    
+    // Génération d'un nom de fichier sécurisé
+    $extension = pathinfo($original_name, PATHINFO_EXTENSION);
+    $safe_filename = $field_name . '_' . time() . '_' . uniqid() . '.' . $extension;
+    $destination = $candidate_dir . $safe_filename;
+    
+    // Déplacement du fichier
+    if (!move_uploaded_file($tmp_name, $destination)) {
+        throw new Exception("Erreur lors du téléchargement du fichier '$original_name'.");
+    }
+    
+    return [
+        'original_name' => $original_name,
+        'stored_name' => $safe_filename,
+        'path' => $destination,
+        'size' => $size,
+        'type' => $detected_type
+    ];
+}
+
+/**
+ * Insertion de la candidature en base de données
+ */
+function insertCandidature($pdo, $data, $uploaded_files) {
+    $sql = "INSERT INTO candidatures (
+        nom, prenom, date_naissance, lieu_naissance, nationalite, sexe, adresse,
+        telephone, email, telephone_urgence, contact_urgence,
+        niveau_admission, specialite, dernier_diplome, etablissement, 
+        annee_obtention, mention, parcours, langages, niveau_anglais, 
+        autres_langues, experiences, motivation, projet_professionnel,
+        connaissance_ecole, newsletter, candidate_id, fichiers,
+        date_candidature, statut
+    ) VALUES (
+        :nom, :prenom, :date_naissance, :lieu_naissance, :nationalite, :sexe, :adresse,
+        :telephone, :email, :telephone_urgence, :contact_urgence,
+        :niveau_admission, :specialite, :dernier_diplome, :etablissement,
+        :annee_obtention, :mention, :parcours, :langages, :niveau_anglais,
+        :autres_langues, :experiences, :motivation, :projet_professionnel,
+        :connaissance, :newsletter, :candidate_id, :fichiers,
+        NOW(), 'en_attente'
+    )";
+    
+    $stmt = $pdo->prepare($sql);
+    
+    $params = [
+        ':nom' => $data['nom'],
+        ':prenom' => $data['prenom'],
+        ':date_naissance' => $data['date-naissance'],
+        ':lieu_naissance' => $data['lieu-naissance'],
+        ':nationalite' => $data['nationalite'],
+        ':sexe' => $data['sexe'],
+        ':adresse' => $data['adresse'],
+        ':telephone' => $data['telephone'],
+        ':email' => $data['email'],
+        ':telephone_urgence' => $data['telephone-urgence'],
+        ':contact_urgence' => $data['contact-urgence'],
+        ':niveau_admission' => $data['niveau-admission'],
+        ':specialite' => $data['specialite'],
+        ':dernier_diplome' => $data['dernier-diplome'],
+        ':etablissement' => $data['etablissement'],
+        ':annee_obtention' => $data['annee-obtention'],
+        ':mention' => $data['mention'],
+        ':parcours' => $data['parcours'],
+        ':langages' => $data['langages'],
+        ':niveau_anglais' => $data['niveau-anglais'],
+        ':autres_langues' => $data['autres-langues'],
+        ':experiences' => $data['experiences'],
+        ':motivation' => $data['motivation'],
+        ':projet_professionnel' => $data['projet-professionnel'],
+        ':connaissance' => $data['connaissance'],
+        ':newsletter' => $data['newsletter'],
+        ':candidate_id' => $uploaded_files['candidate_id'],
+        ':fichiers' => json_encode($uploaded_files['files'], JSON_UNESCAPED_UNICODE)
+    ];
+    
+    $stmt->execute($params);
+    return $pdo->lastInsertId();
+}
+
+/**
+ * Envoi des emails de confirmation
+ */
+function sendConfirmationEmails($data, $candidature_id) {
+    global $admin_email;
+    
+    $subject_candidate = "Confirmation de votre candidature - ENSI Tunisie";
+    $subject_admin = "Nouvelle candidature reçue - ENSI Tunisie";
+    
+    // Email au candidat
+    $message_candidate = "
+    <html>
+    <body style='font-family: Arial, sans-serif;'>
+        <div style='max-width: 600px; margin: 0 auto; padding: 20px;'>
+            <h2 style='color: #1a237e;'>Confirmation de candidature - ENSI Tunisie</h2>
+            
+            <p>Bonjour {$data['prenom']} {$data['nom']},</p>
+            
+            <p>Nous avons bien reçu votre candidature pour intégrer l'École Nationale des Sciences de l'Informatique.</p>
+            
+            <div style='background: #f8f9fa; padding: 15px; border-left: 4px solid #2196f3; margin: 20px 0;'>
+                <strong>Détails de votre candidature :</strong><br>
+                • Numéro de candidature : <strong>ENSI-" . str_pad($candidature_id, 6, '0', STR_PAD_LEFT) . "</strong><br>
+                • Niveau d'admission : {$data['niveau-admission']}<br>
+                • Spécialité : {$data['specialite']}<br>
+                • Date de soumission : " . date('d/m/Y à H:i') . "
+            </div>
+            
+            <p><strong>Prochaines étapes :</strong></p>
+            <ol>
+                <li>Étude de votre dossier par notre commission d'admission</li>
+                <li>Entretien téléphonique ou en visio (si votre profil est retenu)</li>
+                <li>Décision finale sous 15 jours ouvrables</li>
+            </ol>
+            
+            <p>Vous recevrez un email dès que votre dossier aura été étudié.</p>
+            
+            <hr style='margin: 30px 0;'>
+            <p style='font-size: 12px; color: #666;'>
+                École Nationale des Sciences de l'Informatique<br>
+                Campus Universitaire de la Manouba, 2010 Manouba, Tunisie<br>
+                Tél : +216 70 860 260 | Email : admission@ensi.rnu.tn
+            </p>
+        </div>
+    </body>
+    </html>";
+    
+    // Email à l'administration
+    $message_admin = "
+    <html>
+    <body style='font-family: Arial, sans-serif;'>
+        <h3>Nouvelle candidature reçue</h3>
+        <p><strong>Candidat :</strong> {$data['prenom']} {$data['nom']}</p>
+        <p><strong>Email :</strong> {$data['email']}</p>
+        <p><strong>Téléphone :</strong> {$data['telephone']}</p>
+        <p><strong>Niveau :</strong> {$data['niveau-admission']}</p>
+        <p><strong>Spécialité :</strong> {$data['specialite']}</p>
+        <p><strong>ID Candidature :</strong> $candidature_id</p>
+        <p><strong>Date :</strong> " . date('d/m/Y à H:i') . "</p>
+    </body>
+    </html>";
+    
+    // Headers pour l'email HTML
+    $headers = "MIME-Version: 1.0" . "\r\n";
+    $headers .= "Content-type:text/html;charset=UTF-8" . "\r\n";
+    $headers .= "From: ENSI Admission <$admin_email>" . "\r\n";
+    
+    // Envoi des emails (en production, utiliser une bibliothèque comme PHPMailer)
+    mail($data['email'], $subject_candidate, $message_candidate, $headers);
+    mail($admin_email, $subject_admin, $message_admin, $headers);
+}
+
+/**
+ * Affichage de la page de succès
+ */
+function displaySuccessPage($data, $candidature_id) {
+    $candidature_number = "ENSI-" . str_pad($candidature_id, 6, '0', STR_PAD_LEFT);
+    ?>
+    <!DOCTYPE html>
+    <html lang="fr">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Candidature envoyée - ENSI Tunisie</title>
+        <style>
+            body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 20px; }
+            .container { max-width: 800px; margin: 0 auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+            .header { background: linear-gradient(90deg, #1a237e, #3f51b5); color: white; padding: 30px; text-align: center; }
+            .content { padding: 40px; }
+            .success-icon { font-size: 80px; color: #4caf50; text-align: center; margin-bottom: 20px; }
+            .info-box { background: #e8f5e8; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #4caf50; }
+            .steps { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }
+            .btn { display: inline-block; background: #1a237e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 10px 5px; }
+            .btn:hover { background: #303f9f; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>École Nationale des Sciences de l'Informatique</h1>
+                <p>Candidature envoyée avec succès</p>
+            </div>
+            
+            <div class="content">
+                <div class="success-icon">✅</div>
+                
+                <h2 style="text-align: center; color: #1a237e;">Félicitations <?php echo htmlspecialchars($data['prenom']); ?> !</h2>
+                
+                <p style="text-align: center; font-size: 18px;">Votre candidature a été transmise avec succès à notre équipe d'admission.</p>
+                
+                <div class="info-box">
+                    <h3>📋 Récapitulatif de votre candidature</h3>
+                    <p><strong>Numéro de candidature :</strong> <?php echo $candidature_number; ?></p>
+                    <p><strong>Nom :</strong> <?php echo htmlspecialchars($data['nom'] . ' ' . $data['prenom']); ?></p>
+                    <p><strong>Email :</strong> <?php echo htmlspecialchars($data['email']); ?></p>
+                    <p><strong>Niveau d'admission :</strong> <?php echo htmlspecialchars($data['niveau-admission']); ?></p>
+                    <p><strong>Spécialité :</strong> <?php echo htmlspecialchars($data['specialite']); ?></p>
+                    <p><strong>Date de soumission :</strong> <?php echo date('d/m/Y à H:i'); ?></p>
+                </div>
+                
+                <div class="steps">
+                    <h3>🚀 Prochaines étapes</h3>
+                    <ol>
+                        <li><strong>Confirmation par email</strong> - Vous recevrez un email de confirmation dans les prochaines minutes</li>
+                        <li><strong>Étude du dossier</strong> - Notre commission étudiera votre candidature sous 5 jours ouvrables</li>
+                        <li><strong>Entretien</strong> - Si votre profil correspond, nous vous contacterons pour un entretien</li>
+                        <li><strong>Décision finale</strong> - Réponse définitive sous 15 jours ouvrables maximum</li>
+                    </ol>
+                </div>
+                
+                <div style="background: #fff3e0; padding: 15px; border-radius: 8px; border-left: 4px solid #ff9800;">
+                    <h4>📧 Important</h4>
+                    <p>Vérifiez votre boîte de réception (y compris les spams) pour l'email de confirmation.</p>
+                    <p>Conservez précieusement votre <strong>numéro de candidature : <?php echo $candidature_number; ?></strong></p>
+                </div>
+                
+                <div style="text-align: center; margin-top: 30px;">
+                    <a href="index.html" class="btn">🏠 Retour à l'accueil</a>
+                    <a href="Academie.html" class="btn">📚 Découvrir nos formations</a>
+                </div>
+                
+                <hr style="margin: 40px 0;">
+                
+                <div style="text-align: center; color: #666; font-size: 14px;">
+                    <p><strong>Contact :</strong></p>
+                    <p>📞 +216 70 860 260 | 📧 admission@ensi.rnu.tn</p>
+                    <p>🌐 www.ensi.rnu.tn</p>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+    <?php
+}
+
+/**
+ * Affichage de la page d'erreur
+ */
+function displayErrorPage($error_message) {
+    ?>
+    <!DOCTYPE html>
+    <html lang="fr">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Erreur - ENSI Tunisie</title>
+        <style>
+            body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 20px; }
+            .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+            .header { background: #f44336; color: white; padding: 30px; text-align: center; }
+            .content { padding: 40px; text-align: center; }
+            .error-icon { font-size: 80px; color: #f44336; margin-bottom: 20px; }
+            .btn { display: inline-block; background: #1a237e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 10px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>Erreur lors du traitement</h1>
+            </div>
+            
+            <div class="content">
+                <div class="error-icon">❌</div>
+                <h2>Une erreur est survenue</h2>
+                <p style="color: #f44336; background: #ffebee; padding: 15px; border-radius: 6px;">
+                    <?php echo htmlspecialchars($error_message); ?>
+                </p>
+                <p>Veuillez réessayer ou contacter l'administration si le problème persiste.</p>
+                
+                <a href="javascript:history.back()" class="btn">⬅️ Retour</a>
+                <a href="Admission.html" class="btn">🔄 Nouveau formulaire</a>
+            </div>
+        </div>
+    </body>
+    </html>
+    <?php
+}
+?>
