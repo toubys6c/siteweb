@@ -511,6 +511,7 @@
                                 <label for="nationalite" class="required">Nationalité</label>
                                 <select id="nationalite" name="nationalite" required>
                                     <option value="">Sélectionner...</option>
+                                    <option value="burkinabe">Burkinabe</option>
                                     <option value="tunisienne">Tunisienne</option>
                                     <option value="francaise">Française</option>
                                     <option value="algerienne">Algérienne</option>
@@ -528,7 +529,7 @@
                                     <option value="">Sélectionner...</option>
                                     <option value="masculin">Masculin</option>
                                     <option value="feminin">Féminin</option>
-                                    <option value="autre">Autre</option>
+                                    
                                 </select>
                             </div>
                         </div>
@@ -644,7 +645,7 @@
                                         <label for="python">Python</label>
                                     </div>
                                     <div class="checkbox-item">
-                                        <input type="checkbox" id="java" name="langages[]" value="java">
+                                        <input type="checkbox" id="html" name="langages[]" value="html">
                                         <label for="java">Java</label>
                                     </div>
                                     <div class="checkbox-item">
@@ -852,7 +853,7 @@
         </footer>
     </div>
     <script>
-        function updateFileName(input, infoId) {
+                function updateFileName(input, infoId) {
             const fileInfo = document.getElementById(infoId);
             if (input.files.length > 0) {
                 fileInfo.textContent = Array.from(input.files).map(file => file.name).join(', ');
@@ -867,19 +868,156 @@
             const formData = new FormData(form);
             const messageContainer = document.getElementById('message-container');
 
-            // Simulate form submission
-            setTimeout(() => {
-                messageContainer.innerHTML = '<div class="message success">Votre candidature a été soumise avec succès !</div>';
-                form.reset();
-                document.querySelectorAll('.file-info').forEach(info => info.textContent = 'Aucun fichier sélectionné');
-            }, 1000);
+            // Créer un résumé des informations saisies
+            const summary = createFormSummary(formData);
+            
+            // Afficher le résumé avec options de modification ou validation
+            messageContainer.innerHTML = `
+                <div class="message" style="background: #e3f2fd; color: #1565c0; border: 1px solid #bbdefb; text-align: left;">
+                    <h4 style="margin-bottom: 15px; color: #1565c0;">📋 Vérification de vos informations</h4>
+                    <div style="background: white; padding: 20px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #2196f3;">
+                        ${summary}
+                    </div>
+                    <div style="text-align: center; margin-top: 20px;">
+                        <button onclick="confirmSubmission()" style="background: #4caf50; color: white; padding: 12px 24px; border: none; border-radius: 6px; margin-right: 10px; cursor: pointer; font-weight: 600;">
+                            ✅ Confirmer et envoyer
+                        </button>
+                        <button onclick="allowModification()" style="background: #ff9800; color: white; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                            ✏️ Modifier les informations
+                        </button>
+                    </div>
+                </div>
+            `;
 
-            return false; // Prevent actual form submission
+            // Faire défiler vers le message
+            messageContainer.scrollIntoView({ behavior: 'smooth' });
+
+            return false;
         }
+
+        function createFormSummary(formData) {
+            const summary = [];
+            
+            // Informations personnelles
+            summary.push('<strong>👤 Informations personnelles :</strong>');
+            summary.push(`• Nom : ${formData.get('nom') || 'Non renseigné'}`);
+            summary.push(`• Prénom : ${formData.get('prenom') || 'Non renseigné'}`);
+            summary.push(`• Date de naissance : ${formData.get('date-naissance') || 'Non renseigné'}`);
+            summary.push(`• Nationalité : ${formData.get('nationalite') || 'Non renseigné'}`);
+            summary.push('');
+
+            // Contact
+            summary.push('<strong>📞 Contact :</strong>');
+            summary.push(`• Email : ${formData.get('email') || 'Non renseigné'}`);
+            summary.push(`• Téléphone : ${formData.get('telephone') || 'Non renseigné'}`);
+            summary.push('');
+
+            // Formation
+            summary.push('<strong>🎓 Formation :</strong>');
+            summary.push(`• Niveau d'admission : ${formData.get('niveau-admission') || 'Non renseigné'}`);
+            summary.push(`• Spécialité : ${formData.get('specialite') || 'Non renseigné'}`);
+            summary.push(`• Dernier diplôme : ${formData.get('dernier-diplome') || 'Non renseigné'}`);
+            summary.push('');
+
+            // Langages de programmation
+            const langages = formData.getAll('langages[]');
+            if (langages.length > 0) {
+                summary.push('<strong>💻 Langages maîtrisés :</strong>');
+                summary.push(`• ${langages.join(', ')}`);
+                summary.push('');
+            }
+
+            // Documents
+            summary.push('<strong>📋 Documents joints :</strong>');
+            const cv = document.getElementById('cv').files[0];
+            const photo = document.getElementById('photo').files[0];
+            const diplomes = document.getElementById('diplomes').files;
+            
+            summary.push(`• CV : ${cv ? cv.name : 'Non joint'}`);
+            summary.push(`• Photo : ${photo ? photo.name : 'Non jointe'}`);
+            summary.push(`• Diplômes : ${diplomes.length > 0 ? Array.from(diplomes).map(f => f.name).join(', ') : 'Non joints'}`);
+
+            return summary.join('<br>');
+        }
+
+        function confirmSubmission() {
+            const messageContainer = document.getElementById('message-container');
+            
+            // Afficher message de traitement
+            messageContainer.innerHTML = `
+                <div class="message" style="background: #fff3e0; color: #ef6c00; border: 1px solid #ffcc02;">
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
+                        <div style="width: 20px; height: 20px; border: 2px solid #ef6c00; border-top: 2px solid transparent; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                        <span>Envoi en cours...</span>
+                    </div>
+                </div>
+            `;
+
+            // Animation de rotation pour le loader
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            `;
+            document.head.appendChild(style);
+
+            // Simuler l'envoi et afficher le message de succès
+            setTimeout(() => {
+                messageContainer.innerHTML = `
+                    <div class="message success" style="text-align: center;">
+                        <div style="font-size: 48px; margin-bottom: 15px;">✅</div>
+                        <h3 style="color: #2e7d32; margin-bottom: 10px;">Formulaire envoyé avec succès !</h3>
+                        <p style="margin-bottom: 15px;">Votre candidature a été transmise à notre équipe d'admission.</p>
+                        <p style="font-size: 0.9em; color: #555;">
+                            Vous recevrez un email de confirmation dans les prochaines minutes.<br>
+                            Notre équipe étudiera votre dossier et vous contactera sous 48h.
+                        </p>
+                        <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #4caf50;">
+                            <strong>Prochaines étapes :</strong><br>
+                            1. Vérification de votre dossier<br>
+                            2. Entretien téléphonique (si sélectionné)<br>
+                            3. Réponse définitive par email
+                        </div>
+                    </div>
+                `;
+                
+                // Réinitialiser le formulaire
+                document.getElementById('admission-form').reset();
+                document.querySelectorAll('.file-info').forEach(info => info.textContent = 'Aucun fichier sélectionné');
+                
+                // Défiler vers le message
+                messageContainer.scrollIntoView({ behavior: 'smooth' });
+            }, 2000);
+        }
+
+        function allowModification() {
+            const messageContainer = document.getElementById('message-container');
+            messageContainer.innerHTML = `
+                <div class="message" style="background: #e8f5e8; color: #2e7d32; border: 1px solid #c8e6c9;">
+                    <div style="text-align: center;">
+                        <span style="font-size: 24px;">✏️</span>
+                        <p style="margin: 10px 0;">Vous pouvez maintenant modifier vos informations.</p>
+                        <p style="font-size: 0.9em; color: #555;">Apportez les corrections nécessaires puis cliquez à nouveau sur "Soumettre la candidature".</p>
+                    </div>
+                </div>
+            `;
+            
+            // Défiler vers le haut du formulaire
+            document.querySelector('.hero-section').scrollIntoView({ behavior: 'smooth' });
+            
+            // Effacer le message après 3 secondes
+            setTimeout(() => {
+                messageContainer.innerHTML = '';
+            }, 3000);
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             const form = document.getElementById('admission-form');
             form.addEventListener('reset', () => {
                 document.querySelectorAll('.file-info').forEach(info => info.textContent = 'Aucun fichier sélectionné');
+                document.getElementById('message-container').innerHTML = '';
             });
         });
     </script>
